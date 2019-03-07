@@ -1,0 +1,169 @@
+<html>
+    <head>
+        <title>Hello this is a test page</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            a:hover{
+                cursor: pointer;
+            }
+        </style>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+        <script>
+            window.onload = function(){
+                jQuery.ajax({
+                    type: "POST",
+                    url: 'getAllAreas',
+                    contentType: "application/json",
+                    dataType: "json",
+                    success: function(data) {
+                        if(data['result']=="success"){
+                            var areas = data['output'];
+                            for(var i = 0; i < areas.length; i++){
+                                var area = areas[i];
+                                var html = "<div class = 'col-sm-3' style = 'margin-top:10px'>";
+                                html += "<div class = 'card'>";
+                                html += "<div class = 'card-body'>";
+                                html += "<h5 class = 'card-title'>"+area+"</h5>";
+                                html += "<a onclick = \"navigate('"+area+"')\" class = 'btn btn-primary'>Click here</a>";
+                                html += "</div></div></div>"
+                                $("#areaDiv").append(html);
+                            }
+                            console.log(data['output']);
+                        }else{
+                            alert("failed");
+                        }
+                    }
+                });
+            }
+            
+            function navigate(area){
+                jQuery.ajax({
+                    type: "POST",
+                    url: 'getAreaInfo',
+                    data: JSON.stringify({'area':area}),
+                    contentType: "application/json",
+                    dataType: "json",
+                    success: function(data) {
+                        if(data['result']=="success"){
+                            var areas = data['output'];
+                            $("#areaDiv").html("");
+                            for(var i = 0; i < areas.length; i++){
+                                var area = areas[i];
+                                var html = "<div class = 'col-sm-3' style = 'margin-top:10px'>";
+                                html += "<div class = 'card'>";
+                                html += "<div class = 'card-body'>";
+                                html += "<h5 class = 'card-title'>"+area['Data Source']+"</h5>";
+                                html += "<h6 class = 'card-text'>"+area['Data Type']+"</h6>";
+                                html += "<a onclick = \"getMoreInfo('"+area['Data Source']+"')\" class = 'btn btn-primary'>Click here</a>";
+                                html += "</div></div></div>"
+                                $("#areaDiv").append(html);
+                            }
+                            console.log(data['output']);
+                        }else{
+                            alert("failed");
+                        }
+                    }
+                });
+            }
+            
+            function getMoreInfo(datasource){
+//                window.location.href = "/moreInfo?datasource="+datasource;
+                jQuery.ajax({
+                    type: "POST",
+                    url: 'getDataSourceInfo',
+                    data: JSON.stringify({'datasource':datasource}),
+                    contentType: "application/json",
+                    dataType: "json",
+                    success: function(data) {
+                        if(data['result']=="success"){
+                            $("#areaDiv").html("");
+                            var info = data['output'];
+                            var html = "<div class = 'col-md-2'>Area</div><div class = 'col-md-9'>"+info['Area']+"</div>";
+                            html += "<div class = 'col-md-2'>Data Source</div><div class = 'col-md-9'>"+info['Data Source']+"</div>";
+                            html += "<div class = 'col-md-2'>Data Type</div><div class = 'col-md-9'>"+info['Data Type']+"</div>";
+                            html += "<div class = 'col-md-2'>Characteristics</div><div class = 'col-md-9'>"+info['Characteristics']+"</div>";
+                            html += "<div class = 'col-md-2'>Comments</div><div class = 'col-md-9'>"+info['Comments']+"</div>";
+                            html += "<div class = 'col-md-2'>Contact</div><div class = 'col-md-9'>"+info['Contact']+"</div>";
+                            html += "<div class = 'col-md-2'>Geo Location</div><div class = 'col-md-9'>";
+
+                            var locations = info['Geo-Location'];
+                            for(var i = 0; i < locations.length; i++){
+                                var source = info['Type of Source'];
+                                var fileStr = '';
+                                for(var j = 0; j < source.length; j++){
+                                    fileStr += "<a href = '#' onclick = \"files('"+info['Area']+"','"+info['Data Source']+"','"+source[j]+"','"+locations[i]+"')\">" + source[j] + "</a> ";
+                                }
+                                html += "<div class ='col-md-12'>" + locations[i] + " - " + fileStr + "</div>";
+                            }
+                            html += "</div>";
+                            $("#areaDiv").html(html);
+                        }else{
+                            alert("failed");
+                        }
+                    }
+                });
+            }
+
+            function files(area, dataSource, fileType, location){
+                $("#modal").modal();
+                $("#modalBody").html("Fetching data of type " + dataSource + ". Please wait!");
+                var requestData = {};
+                requestData['dataSource'] = dataSource;
+                requestData['area'] = area;
+                requestData['fileType'] = fileType;
+                requestData['location'] = location;
+                jQuery.ajax({
+                    type: "POST",
+                    url: 'getFiles',
+                    data: JSON.stringify(requestData),
+                    contentType: "application/json",
+                    dataType: "json",
+                    success: function(data) {
+                        if(data['result']=="success"){
+                            console.log(data['output']);
+                            $("#modalBody").empty();
+                            for(var i = 0; i < data['output'].length; i++){
+                                var file = data['output'][i];
+                                $("#modalBody").append("<a href = '"+file['URL']+"' target='_blank'>"+fileType+"</a>");    
+                            }
+                        }else{
+                            alert("failed");
+                        }
+                    }
+                });
+            }
+        </script>
+    </head>
+    <body>
+        <nav class="navbar fixed-top navbar-light bg-light">
+            <a class="navbar-brand" href="/">Boliden</a>
+        </nav>
+        <div class = "container-fluid" style = "margin-top:60px">
+            <div class = "row" id = "areaDiv">
+                
+            </div>
+        </div>
+        <div class="modal" tabindex="-1" role="dialog" id = "modal">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id = "title">File Explorer</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body" id = "modalBody">
+                        <p>Modal body text goes here.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
